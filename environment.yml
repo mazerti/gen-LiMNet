@@ -1,0 +1,15 @@
+name: gen-limnet
+channels:
+  - conda-forge
+  - defaults
+  - pytorch-nightly
+dependencies:
+  - python
+  - cudatoolkit
+  - numpy
+  - pandas
+  - pytorch
+  - ignite
+  - scikit-learn
+  - scipy
+  - tqdm
