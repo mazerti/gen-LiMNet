@@ -114,3 +114,16 @@ class EdgeIsMalicious(BinaryClassification):
 
     def compute_labels(self, data, id2ip, ip2id):
         return pandas2torch(data['traffic_type'] == 'mal')
+
+class EdgeBinaryClassification(BinaryClassification):
+    def __init__(self, label, positiveTag, **kwargs):
+        self.label = label
+        self.positiveTag = positiveTag
+        super().__init__('edge_label_classification', **kwargs)
+
+    @property
+    def required_features(self):
+        return {self.label}
+
+    def compute_labels(self, data, id2ip, ip2id):
+        return pandas2torch(data[self.label] == self.positiveTag)
