@@ -112,7 +112,7 @@ class DataLoader:
             if totalFeatures % self.align != 0:
                 for i in range(self.align - (totalFeatures % self.align)):
                     Xe[f'_pad_{i}'] = 0
-
+            Xe = Xe.dropna(axis=1)
             Xe = pandas2torch(Xe)
 
 
