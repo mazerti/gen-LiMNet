@@ -57,7 +57,7 @@ class DataLoader:
         with TimedStep('Converting node IPs'):
             id2ip = pd.unique(data[['ip_src', 'ip_dst']].values.ravel('K'))
             ip2id = {ip: id for id, ip in enumerate(id2ip)}
-            data.loc[:,('ip_src', 'ip_dst')] = data[['ip_src', 'ip_dst']].applymap(ip2id.get)
+            data.loc[:,('ip_src', 'ip_dst')] = data[['ip_src', 'ip_dst']].map(ip2id.get)
             E = pandas2torch(data[['ip_src', 'ip_dst']], dtype = np.int64)
 
         with TimedStep('Computing labels'):
@@ -82,11 +82,11 @@ class DataLoader:
                 Xv = torch.ones(len(id2ip), 1)
 
         with TimedStep('Computing edge features'):
-            Xnum = data[self.edgeFeatures].select_dtypes(include = np.number)
+            Xnum = data[list(self.edgeFeatures)].select_dtypes(include = np.number)
             q1, med, q3 = map(lambda t: t[1], Xnum.quantile([.25,.5,.75]).iterrows())
             Xnum = (Xnum - med) / (q3 - q1)
 
-            Xcat = data[self.edgeFeatures].select_dtypes(exclude = np.number)
+            Xcat = data[list(self.edgeFeatures)].select_dtypes(exclude = np.number)
             Xcat = pd.get_dummies(Xcat)
 
             Xe = Xnum.join(Xcat)

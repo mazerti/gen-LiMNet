@@ -13,12 +13,14 @@ def lossFunction(tasks):
     return compute_loss
 
 def run_training(conf, baseFolder, device, resume):
+    # Get config
     model = conf['model']
     outputs = conf['outputs']
     dataLoader = conf['dataLoader']
     mixedPrecision = conf.get('mixedPrecision', False)
     tasks = o.get_tasks(outputs, device)
 
+    # Load and split dataset
     dataset, info = dataLoader.loadData(tasks)
     with open(f'{baseFolder}/info.json', 'w') as f:
         json.dump(info, f, indent = 4)
@@ -28,12 +30,13 @@ def run_training(conf, baseFolder, device, resume):
     trainData = torch.utils.data.DataLoader(trainDataset, batch_size = conf['trainBatchSize'], **data_loader_args)
     validData = torch.utils.data.DataLoader(validDataset, batch_size = conf['validBatchSize'], **data_loader_args)
 
-    model.build(info, o.get_decoders(outputs))
+    # Setup the model, loss function and optimizers
+    model.build(info, o.get_decoders(outputs), torch.float16 if mixedPrecision else torch.float32)
     model.to(device)
     model.optimize()
 
     loss = lossFunction(tasks)
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = torch.amp.GradScaler('cuda')
     optimizer = conf['optimizer'](model.parameters())
 
     metrics = {metricKey: metricFunc for task in tasks for metricKey, metricFunc in task.metrics.items()}
@@ -43,6 +46,7 @@ def run_training(conf, baseFolder, device, resume):
     trainer = ignite.engine.create_supervised_trainer(model, optimizer, lambda Ypred, Ytrue: loss((Ypred, Ytrue)), device = device, **trainerArgs)
     evaluator = ignite.engine.create_supervised_evaluator(model, metrics, device = device, amp_mode = 'amp' if mixedPrecision else None)
 
+    # Define tracking events/statistics (checkpoints, losses, etc.)
     batchLosses = []
     @trainer.on(ignite.engine.Events.ITERATION_COMPLETED)
     def collect_batch_losses(trainer):
@@ -83,8 +87,10 @@ def run_training(conf, baseFolder, device, resume):
     else:
         do_validation(trainer)
 
+    # Run training
     trainer.run(trainData, max_epochs = conf['epochs'])
 
+    # Store results
     with open(f'{baseFolder}/metrics.json', 'w') as f:
         json.dump(trainer.state.metrics_history, f, indent = 4)
     torch.save(model.state_dict(), f'{baseFolder}/model.pt', pickle_protocol = pickle.HIGHEST_PROTOCOL)

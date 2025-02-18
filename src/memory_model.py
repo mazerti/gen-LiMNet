@@ -106,8 +106,9 @@ class MemoryNetwork(torch.nn.Module):
         super().__init__()
         self.memory_updater = memory_updater
 
-    def build(self, info, decoders):
+    def build(self, info, decoders, dtype):
         Fh = self.memory_updater.build(info['Fe'], info['Fv'])
+        self.dtype = dtype
         self.decoders = decoders
         for i, decoder in enumerate(self.decoders):
             decoder.build(Fh, info['Fe'], info['Fv'])
@@ -123,7 +124,7 @@ class MemoryNetwork(torch.nn.Module):
         N = torch.max(E) + 1
 
         if memory is None:
-            memory = self.memory_updater.init_memory(B, N, Xv.device)
+            memory = self.memory_updater.init_memory(B, N, Xv.device, self.dtype)
 
         outputs = tuple([] for _ in range(len(self.decoders)))
 

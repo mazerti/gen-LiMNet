@@ -12,6 +12,8 @@ def get_decoders(outputs):
             task.pred_pos = pred_size
             task.true_pos = true_size
             task.pred_end = task.pred_pos + task.pred_size
+            pred_size += task.pred_size
+            task.true_pos = true_size
             task.true_end = task.true_pos + task.true_size
             pred_size += task.pred_size
             true_size += task.true_size
@@ -72,6 +74,7 @@ class BinaryClassification(Task):
 class MultiClassification(Task):
     def __init__(self, key, loss = torch.nn.CrossEntropyLoss(), activation = torch.nn.functional.softmax, **kwargs):
         super().__init__(key, loss, activation, **kwargs)
+        self.pred_size = 1
         self.true_size = 1
 
 ########## ACTUAL OUTPUTS ##########
