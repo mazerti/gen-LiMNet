@@ -1,9 +1,19 @@
 import cells
 from sequence_loader import DataLoader
-from metrics import accuracy, auc
+import metrics
 import memory_model as m
 import outputs as o
 import torch
+
+
+def auc(prepare_pred, device):
+    def filter_unlabeled(output):
+        y_pred, y_true = output
+        mask = y_true != 2
+        return y_pred[mask], y_true[mask]
+
+    return metrics.auc(prepare_pred, device, task_transform=filter_unlabeled)
+
 
 conf = {
     "dataLoader": DataLoader(
@@ -22,12 +32,16 @@ conf = {
     "validBatchSize": 4096,
     "model": m.MemoryNetwork(m.SimpleMemoryUpdater(64, torch.nn.GRUCell)),
     "optimizer": torch.optim.Adam,
-    "mixedPrecision": False,
+    "mixedPrecision": True,
     "outputs": [
         (
             m.EdgeDecoder,
             [
-                o.EdgeBinaryClassification("Labels", 1, metrics=[accuracy, auc]),
+                o.EdgeMulticlassification(
+                    labels={"Labels"},
+                    taskName="dropout-prediction",
+                    metrics=[auc],
+                ),
             ],
         ),
     ],
