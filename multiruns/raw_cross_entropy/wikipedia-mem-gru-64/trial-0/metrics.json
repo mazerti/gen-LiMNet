@@ -1,0 +1,44 @@
+[
+    {
+        "edge_label_classification-accuracy": 0.5692129032258064,
+        "edge_label_classification-auc": 0.5029894569767956,
+        "validation-loss": 0.15596172213554382,
+        "epoch_time": null,
+        "training-loss": NaN
+    },
+    {
+        "edge_label_classification-accuracy": 0.7857290322580646,
+        "edge_label_classification-auc": 0.6404369924053335,
+        "validation-loss": 0.15447302162647247,
+        "epoch_time": 14.74188756942749,
+        "training-loss": 0.7939625382423401
+    },
+    {
+        "edge_label_classification-accuracy": 0.8892064516129032,
+        "edge_label_classification-auc": 0.7062322564144032,
+        "validation-loss": 0.15300165116786957,
+        "epoch_time": 14.702373504638672,
+        "training-loss": 0.7891457080841064
+    },
+    {
+        "edge_label_classification-accuracy": 0.9083483870967742,
+        "edge_label_classification-auc": 0.7296697641972237,
+        "validation-loss": 0.15150463581085205,
+        "epoch_time": 15.330367088317871,
+        "training-loss": 0.7844053506851196
+    },
+    {
+        "edge_label_classification-accuracy": 0.917,
+        "edge_label_classification-auc": 0.738515517012253,
+        "validation-loss": 0.14995229244232178,
+        "epoch_time": 14.707594394683838,
+        "training-loss": 0.7795958518981934
+    },
+    {
+        "edge_label_classification-accuracy": 0.921741935483871,
+        "edge_label_classification-auc": 0.7413119813866385,
+        "validation-loss": 0.14832840859889984,
+        "epoch_time": 14.932393550872803,
+        "training-loss": 0.7746200561523438
+    }
+]

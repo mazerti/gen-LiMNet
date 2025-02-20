@@ -1,0 +1,68 @@
+[
+    {
+        "node-is-malicious-accuracy": 0.57793,
+        "node-is-malicious-auc": 0.34054396831270983,
+        "node-is-attacked-accuracy": 0.7030233333333333,
+        "node-is-attacked-auc": 0.42652014832192986,
+        "edge-is-malicious-accuracy": 0.45137333333333335,
+        "edge-is-malicious-auc": 0.5993839198190045,
+        "validation-loss": 2.053718328475952,
+        "epoch_time": null,
+        "training-loss": NaN
+    },
+    {
+        "node-is-malicious-accuracy": 0.62715,
+        "node-is-malicious-auc": 0.3717106149504038,
+        "node-is-attacked-accuracy": 0.77809,
+        "node-is-attacked-auc": 0.4403528987216959,
+        "edge-is-malicious-accuracy": 0.4515733333333333,
+        "edge-is-malicious-auc": 0.6263279850678732,
+        "validation-loss": 2.018308401107788,
+        "epoch_time": 13.157813549041748,
+        "training-loss": 2.0555503368377686
+    },
+    {
+        "node-is-malicious-accuracy": 0.6629233333333333,
+        "node-is-malicious-auc": 0.4045172858350925,
+        "node-is-attacked-accuracy": 0.8218966666666667,
+        "node-is-attacked-auc": 0.4828257194156944,
+        "edge-is-malicious-accuracy": 0.458,
+        "edge-is-malicious-auc": 0.640275200361991,
+        "validation-loss": 1.984879970550537,
+        "epoch_time": 13.621648073196411,
+        "training-loss": 2.0209884643554688
+    },
+    {
+        "node-is-malicious-accuracy": 0.71438,
+        "node-is-malicious-auc": 0.44193958870377414,
+        "node-is-attacked-accuracy": 0.82896,
+        "node-is-attacked-auc": 0.5536922677571396,
+        "edge-is-malicious-accuracy": 0.4778866666666667,
+        "edge-is-malicious-auc": 0.6485692921266968,
+        "validation-loss": 1.9523210525512695,
+        "epoch_time": 13.507270574569702,
+        "training-loss": 1.9883886575698853
+    },
+    {
+        "node-is-malicious-accuracy": 0.73164,
+        "node-is-malicious-auc": 0.4778142750901062,
+        "node-is-attacked-accuracy": 0.8292633333333334,
+        "node-is-attacked-auc": 0.6337868040366174,
+        "edge-is-malicious-accuracy": 0.6018133333333333,
+        "edge-is-malicious-auc": 0.6561910941176471,
+        "validation-loss": 1.9197020530700684,
+        "epoch_time": 13.382589101791382,
+        "training-loss": 1.956664800643921
+    },
+    {
+        "node-is-malicious-accuracy": 0.7329566666666667,
+        "node-is-malicious-auc": 0.5184131394075647,
+        "node-is-attacked-accuracy": 0.82933,
+        "node-is-attacked-auc": 0.698227366679083,
+        "edge-is-malicious-accuracy": 0.62734,
+        "edge-is-malicious-auc": 0.656592057918552,
+        "validation-loss": 1.8860454559326172,
+        "epoch_time": 12.183712720870972,
+        "training-loss": 1.9249241352081299
+    }
+]
