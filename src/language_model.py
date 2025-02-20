@@ -1,6 +1,7 @@
 import torch
 from typing import Optional, Tuple
 
+
 class SimpleRecurrentLayer(torch.nn.Module):
     def __init__(self, cell_type, size, dropout_rate):
         super().__init__()
@@ -14,12 +15,15 @@ class SimpleRecurrentLayer(torch.nn.Module):
         return self.size
 
     def forward(self, inputs: torch.Tensor):
-        H = torch.zeros((inputs.shape[1], self.size), dtype = inputs.dtype, device = inputs.device)
+        H = torch.zeros(
+            (inputs.shape[1], self.size), dtype=inputs.dtype, device=inputs.device
+        )
         outputs = []
         for input in inputs:
             H = self.cell(input, H)
             outputs.append(H)
         return torch.stack(outputs)
+
 
 class LSTMRecurrentLayer(torch.nn.Module):
     def __init__(self, cell_type, size, dropout_rate):
@@ -34,13 +38,18 @@ class LSTMRecurrentLayer(torch.nn.Module):
         return self.size
 
     def forward(self, inputs: torch.Tensor):
-        H = torch.zeros((inputs.shape[1], self.size), dtype = inputs.dtype, device = inputs.device)
-        C = torch.zeros((inputs.shape[1], self.size), dtype = inputs.dtype, device = inputs.device)
+        H = torch.zeros(
+            (inputs.shape[1], self.size), dtype=inputs.dtype, device=inputs.device
+        )
+        C = torch.zeros(
+            (inputs.shape[1], self.size), dtype=inputs.dtype, device=inputs.device
+        )
         outputs = []
         for input in inputs:
             H, C = self.cell(input, (H, C))
             outputs.append(H)
         return torch.stack(outputs)
+
 
 class EdgeDecoder(torch.nn.Module):
     def __init__(self, H):
@@ -52,6 +61,7 @@ class EdgeDecoder(torch.nn.Module):
 
     def forward(self, input: torch.Tensor):
         return self.linear(input)
+
 
 class NodeDecoder(torch.nn.Module):
     def __init__(self, H):
@@ -65,7 +75,8 @@ class NodeDecoder(torch.nn.Module):
     def forward(self, input: torch.Tensor):
         src_out = self.src_linear(input)
         dst_out = self.dst_linear(input)
-        return torch.stack((src_out, dst_out), dim = 1)
+        return torch.stack((src_out, dst_out), dim=1)
+
 
 class RecurrentNetwork(torch.nn.Module):
     def __init__(self, emb_dim, layers):
@@ -74,15 +85,15 @@ class RecurrentNetwork(torch.nn.Module):
         self.layers = tuple(layers)
 
     def build(self, info, decoders):
-        self.embedder = torch.nn.Embedding(info['Ntoks'], self.emb_dim)
+        self.embedder = torch.nn.Embedding(info["Ntoks"], self.emb_dim)
         Fh = self.emb_dim
         for i, layer in enumerate(self.layers):
             Fh = layer.build(Fh)
-            self.add_module(f'layer_{i}', layer)
+            self.add_module(f"layer_{i}", layer)
         self.decoders = decoders
         for i, decoder in enumerate(self.decoders):
             decoder.build(Fh)
-            self.add_module(f'decoder_{i}', decoder)
+            self.add_module(f"decoder_{i}", decoder)
 
     def optimize(self):
         self.embedder = torch.jit.script(self.embedder)
@@ -102,6 +113,9 @@ class RecurrentNetwork(torch.nn.Module):
 
     @staticmethod
     def makeBatch(seqs):
-        Xe = torch.stack([Xe for Xe, labels in seqs], dim = 1)
-        labels = tuple(torch.stack([labels[i] for Xe, labels in seqs], dim = 0) for i in range(len(seqs[0][1])))
+        Xe = torch.stack([Xe for Xe, labels in seqs], dim=1)
+        labels = tuple(
+            torch.stack([labels[i] for Xe, labels in seqs], dim=0)
+            for i in range(len(seqs[0][1]))
+        )
         return Xe, labels

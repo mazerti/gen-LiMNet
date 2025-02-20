@@ -19,6 +19,7 @@ def auc(prepare_predictions, device, task_transform=None, **kwargs):
             return output
         output = task_transform(output)
         return output
+
     return ignite.contrib.metrics.ROC_AUC(output_transform, kwargs)
 
 

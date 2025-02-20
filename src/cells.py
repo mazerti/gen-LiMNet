@@ -1,11 +1,12 @@
 import torch
 from typing import Tuple
 
+
 class FastGRNN(torch.nn.Module):
     def __init__(self, Fi, Fh):
         super().__init__()
-        self.input_linear = torch.nn.Linear(Fi, Fh, bias = False)
-        self.state_linear = torch.nn.Linear(Fh, Fh, bias = False)
+        self.input_linear = torch.nn.Linear(Fi, Fh, bias=False)
+        self.state_linear = torch.nn.Linear(Fh, Fh, bias=False)
         self.gate_bias = torch.nn.Parameter(torch.ones(1, Fh))
         self.update_bias = torch.nn.Parameter(torch.ones(1, Fh))
         self.zeta = torch.nn.Parameter(torch.ones(1, 1))
@@ -18,11 +19,12 @@ class FastGRNN(torch.nn.Module):
         delta = torch.sigmoid(self.zeta) * (1 - gate) + torch.sigmoid(self.nu)
         return gate * state + delta * update
 
+
 class LSTM(torch.nn.Module):
     def __init__(self, Fi, Fh):
         super().__init__()
         self.input_linear = torch.nn.Linear(Fi, 4 * Fh)
-        self.state_linear = torch.nn.Linear(Fh, 4 * Fh, bias = False)
+        self.state_linear = torch.nn.Linear(Fh, 4 * Fh, bias=False)
 
     def forward(self, inputs: torch.Tensor, states: Tuple[torch.Tensor, torch.Tensor]):
         H, C = states
@@ -39,6 +41,7 @@ class LSTM(torch.nn.Module):
         H = O * torch.tanh(C)
 
         return H, C
+
 
 class GRU(torch.nn.Module):
     def __init__(self, Fi, Fh):
