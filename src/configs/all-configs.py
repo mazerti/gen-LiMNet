@@ -1,6 +1,7 @@
 import cells
-from network_sequence_loader import DataLoader as NetworkDataLoader
-from packet_header_loader    import DataLoader as PacketDataLoader
+from sequence_loader import DataLoader
+
+# from packet_header_loader import DataLoader
 from metrics import accuracy, auc
 import memory_model as mem
 import language_model as lang
@@ -10,84 +11,102 @@ import torch
 trials = 1
 
 datasets = {
-    'kitsune':  ('kitsune/*'        , 1024, 30,   8, 20),
-    'torii':    ('medbiot/torii*'   , 4096, 10,  32, 10),
-    'mirai':    ('medbiot/mirai*'   , 4096, 10,  64, 10),
-    'bashlite': ('medbiot/bashlite*', 8192, 10, 192, 10),
-    'medbiot':  ('medbiot/*'        , 8192, 10, 192, 10),
+    "mooc": (
+        "/data/gen-limnet/mooc_actions_merged.csv",
+        "USERID",
+        "TARGETID",
+        "TIMESTAMP",
+        {"FEATURE0", "FEATURE1", "FEATURE2", "FEATURE3"},
+        "LABEL",
+        192,
+        5,
+    ),
+    "wikipedia": (
+        "/data/gen-limnet/wikipedia.csv",
+        "user_id",
+        "item_id",
+        "timestamp",
+        {f"f{i}" for i in range(172)},
+        "state_label",
+        192,
+        5,
+    ),
+    "reddit": (
+        "/data/gen-limnet/reddit.csv",
+        "user_id",
+        "item_id",
+        "timestamp",
+        {f"f{i}" for i in range(172)},
+        "state_label",
+        192,
+        5,
+    ),
 }
 
 cells = {
-    'fastgrnn': (cells.FastGRNN   , lang.SimpleRecurrentLayer, False, mem.SimpleMemoryUpdater, False),
-    'gru':      (torch.nn.GRUCell , lang.SimpleRecurrentLayer, True , mem.SimpleMemoryUpdater, False),
-    'lstm':     (torch.nn.LSTMCell, lang.LSTMRecurrentLayer  , True , mem.LSTMMemoryUpdater  , False),
-}
-
-recurrentLayers = [1, 3]
-
-featureSets = {
-    'all_feats':      PacketDataLoader.ALL_FEATURES           ,
-    'no_ids':         PacketDataLoader.ALL_FEATURES_EXCEPT_IDS,
-    'ports_and_size': PacketDataLoader.PORT_AND_SIZE_ONLY     ,
+    # 'fastgrnn': (cells.FastGRNN   , lang.SimpleRecurrentLayer, False, mem.SimpleMemoryUpdater, False),
+    "gru": (
+        torch.nn.GRUCell,
+        lang.SimpleRecurrentLayer,
+        True,
+        mem.SimpleMemoryUpdater,
+        False,
+    ),
+    # 'lstm':     (torch.nn.LSTMCell, lang.LSTMRecurrentLayer  , True , mem.LSTMMemoryUpdater  , False),
 }
 
 embeddingSizes = [32, 64]
 
 configs = {}
 
-for datasetName, (datasetLocation, recTrainBatchSize, recEpochs, memTrainBatchSize, memEpochs) in datasets.items():
-    for cellName, (cellType, recLayerType, recMixedPrecision, memLayerType, memMixedPrecision) in cells.items():
-        for embeddingSize in embeddingSizes:
-
-            for numLayers in recurrentLayers:
-                for featureSetName, featureSet in featureSets.items():
-                    configName = f'{datasetName}-lang-{cellName}-{numLayers}-{embeddingSize}-{featureSetName}'
-                    configs[configName] = {
-                        'dataLoader': PacketDataLoader(    
-                            paths = [f'data/headers/{datasetLocation}'],
-                            edgeFeatures = featureSet
+for datasetName, (
+    datasetLocation,
+    sourceColumn,
+    targetColumn,
+    timestampColumn,
+    edgeFeatures,
+    edgeLabels,
+    trainBatchSize,
+    epochs,
+) in datasets.items():
+    for cellName, (
+        cellType,
+        recLayerType,
+        recMixedPrecision,
+        memLayerType,
+        memMixedPrecision,
+    ) in cells.items():
+        configName = f"{datasetName}-mem-{cellName}-64"
+        configs[configName] = {
+            "dataLoader": DataLoader(
+                paths=[datasetLocation],
+                sourceColumn=sourceColumn,
+                targetColumn=targetColumn,
+                timestampColumn=timestampColumn,
+                edgeFeatures=edgeFeatures,
+                nodeFeatures={},
+                sequenceLength=5_000,
+                sequenceStride=1_000,
+                useDeltas=False,
+            ),
+            "trainRatio": 0.8,
+            "epochs": epochs,
+            "trainBatchSize": trainBatchSize,
+            "validBatchSize": 4096,
+            "model": mem.MemoryNetwork(mem.SimpleMemoryUpdater(64, torch.nn.GRUCell)),
+            "optimizer": torch.optim.Adam,
+            "mixedPrecision": False,
+            "outputs": [
+                (
+                    mem.EdgeDecoder,
+                    [
+                        o.EdgeBinaryClassification(
+                            edgeLabels,
+                            1,
+                            metrics=[accuracy, auc],
+                            loss=torch.nn.CrossEntropyLoss(),
                         ),
-                        'trainRatio': 0.8,
-                        'epochs': recEpochs,
-                        'trainBatchSize': recTrainBatchSize,
-                        'validBatchSize': recTrainBatchSize,
-                        'model': lang.RecurrentNetwork(embeddingSize, [recLayerType(cellType, embeddingSize, 0.2) for _ in range(numLayers)]),
-                        'optimizer': torch.optim.Adam,
-                        'mixedPrecision': recMixedPrecision,
-                        'outputs': [
-                            (lang.NodeDecoder, [
-                                o.NodeIsMalicious(metrics = [accuracy, auc]),
-                                o.NodeIsAttacked(metrics = [accuracy, auc]),
-                            ]),
-                            (lang.EdgeDecoder, [
-                                o.EdgeIsMalicious(metrics = [accuracy, auc]),
-                            ]),
-                        ]
-                    }
-
-            configName = f'{datasetName}-mem-{cellName}-{embeddingSize}'
-            configs[configName] = {
-                'dataLoader': NetworkDataLoader(
-                    paths = [f'data/{datasetLocation}'],
-                    edgeFeatures = {'length', 'protocol'},
-                    nodeFeatures = {'is-private', 'is-multicast'},
-                    sequenceLength = 5_000,
-                    sequenceStride = 1_000,
+                    ],
                 ),
-                'trainRatio': 0.8,
-                'epochs': memEpochs,
-                'trainBatchSize': memTrainBatchSize,
-                'validBatchSize': 2048,
-                'model': mem.MemoryNetwork(memLayerType(embeddingSize, cellType)),
-                'optimizer': torch.optim.Adam,
-                'mixedPrecision': memMixedPrecision,
-                'outputs': [
-                    (mem.NodeDecoder, [
-                        o.NodeIsMalicious(metrics = [accuracy, auc]),
-                        o.NodeIsAttacked(metrics = [accuracy, auc]),
-                    ]),
-                    (mem.EdgeDecoder, [
-                        o.EdgeIsMalicious(metrics = [accuracy, auc]),
-                    ]),
-                ]
-            }
+            ],
+        }
