@@ -27,7 +27,12 @@ conf = {
         (
             m.EdgeDecoder,
             [
-                o.EdgeBinaryClassification("LABEL", 1, metrics=[accuracy, auc]),
+                o.EdgeBinaryClassification(
+                    "LABEL",
+                    1,
+                    metrics=[accuracy, auc],
+                    loss=torch.nn.CrossEntropyLoss(),
+                ),
             ],
         ),
     ],
