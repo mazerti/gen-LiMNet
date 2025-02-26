@@ -96,6 +96,10 @@ def run_training(conf, baseFolder, device, resume):
         except AttributeError:
             trainer.state.metrics_history = [metrics]
 
+        # can do better
+        with open(f"{baseFolder}/metrics.json", "w") as f:
+            json.dump(trainer.state.metrics_history, f, indent=4)
+
     util.tqdmHandler(trainer, desc="epochs", epochs=True)
     util.tqdmHandler(trainer, desc="training", leave=False)
     util.tqdmHandler(evaluator, desc="validation", leave=False)
