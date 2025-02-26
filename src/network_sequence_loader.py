@@ -87,7 +87,7 @@ class DataLoader:
             num_outputs = max(task.output for task in tasks) + 1
             labels = tuple([] for _ in range(num_outputs))
             for task in tasks:
-                labels[task.output].append(task.compute_labels(data, id2ip, ip2id))
+                labels[task.output].append(task.compute_labels(data))
             labels = tuple(torch.stack(lbls, dim=-1) for lbls in labels)
 
         with TimedStep("Computing node features"):

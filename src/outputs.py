@@ -34,11 +34,11 @@ def get_tasks(outputs, device):
 
 
 class Task:
-    def __init__(self, key, loss, activation, weight=1, metrics=[]):
+    def __init__(self, key, loss, activation, taskWeight=1, metrics=[]):
         self.key = key
         self.loss = loss
         self.activation = activation
-        self.weight = weight
+        self.taskWeight = taskWeight
         self._metrics = metrics
 
     def initialize(self, output, device):
@@ -60,13 +60,13 @@ class Task:
         Ypred, Ytrue = self.extract(state_output)
         Ypred = torch.squeeze(Ypred)
         Ytrue = torch.squeeze(Ytrue)
-        return self.weight * self.loss(Ypred, Ytrue)
+        return self.taskWeight * self.loss(Ypred, Ytrue)
 
     def prepare_predictions(self, state_output):
         Ypred, Ytrue = self.extract(state_output)
         return self.activation(Ypred), Ytrue
 
-    def compute_labels(self, data, id2ip, ip2id):
+    def compute_labels(self, data):
         raise NotImplementedError("compute_labels should be implemented by subclasses")
 
     @property
@@ -88,7 +88,7 @@ class MultiClassification(Task):
         self,
         key,
         loss=torch.nn.CrossEntropyLoss(),
-        activation=torch.nn.Softmax(dim=2),  # TODO: this is hardcoded, it's bad !!
+        activation=torch.nn.Softmax(),
         **kwargs,
     ):
         super().__init__(key, loss, activation, **kwargs)
@@ -107,7 +107,7 @@ class NodeIsMalicious(BinaryClassification):
     def required_features(self):
         return {"traffic_type", "port_src", "port_dst"}
 
-    def compute_labels(self, data, id2ip, ip2id):
+    def compute_labels(self, data):
         Ye = data["traffic_type"] == "mal"
         Ysrc = pandas2torch(Ye & (data["port_src"] > 10000))
         Ydst = pandas2torch(Ye & (data["port_dst"] > 10000))
@@ -122,7 +122,7 @@ class NodeIsAttacked(BinaryClassification):
     def required_features(self):
         return {"traffic_type", "port_src", "port_dst"}
 
-    def compute_labels(self, data, id2ip, ip2id):
+    def compute_labels(self, data):
         Ye = data["traffic_type"] == "mal"
         Ysrc = pandas2torch(Ye & (data["port_src"] < 10000))
         Ydst = pandas2torch(Ye & (data["port_dst"] < 10000))
@@ -137,13 +137,13 @@ class EdgeIsMalicious(BinaryClassification):
     def required_features(self):
         return {"traffic_type"}
 
-    def compute_labels(self, data, id2ip, ip2id):
+    def compute_labels(self, data):
         return pandas2torch(data["traffic_type"] == "mal")
 
 
 class EdgeBinaryClassification(BinaryClassification):
     def __init__(
-        self, label, positiveTag, taskName="edge_label_classification", **kwargs
+        self, label: str, positiveTag, taskName="edge_label_classification", **kwargs
     ):
         self.label = label
         self.positiveTag = positiveTag
@@ -153,7 +153,7 @@ class EdgeBinaryClassification(BinaryClassification):
     def required_features(self):
         return {self.label}
 
-    def compute_labels(self, data, id2ip, ip2id):
+    def compute_labels(self, data):
         return pandas2torch(data[self.label] == self.positiveTag)
 
 
@@ -166,5 +166,5 @@ class EdgeMulticlassification(MultiClassification):
     def required_features(self):
         return self.labels
 
-    def compute_labels(self, data, id2ip, ip2id):
+    def compute_labels(self, data):
         return pandas2torch(data[list(self.labels)])
