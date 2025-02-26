@@ -2,7 +2,7 @@ import cells
 from sequence_loader import DataLoader
 
 # from packet_header_loader import DataLoader
-from metrics import accuracy, auc
+from metrics import accuracy, auc, precision, recall
 import memory_model as mem
 import language_model as lang
 import outputs as o
@@ -103,7 +103,7 @@ for datasetName, (
                         o.EdgeBinaryClassification(
                             edgeLabels,
                             1,
-                            metrics=[accuracy, auc],
+                            metrics=[precision, recall, accuracy, auc],
                             loss=torch.nn.CrossEntropyLoss(),
                         ),
                     ],
