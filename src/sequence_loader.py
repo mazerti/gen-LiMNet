@@ -69,6 +69,7 @@ class DataLoader:
         nodeFeatures=set(),
         align=1,
         useDeltas=False,
+        bipartite=False,
     ):
         self.paths = paths
         self.sequenceLength = sequenceLength
@@ -80,6 +81,7 @@ class DataLoader:
         self.nodeFeatures = nodeFeatures
         self.align = align
         self.useDeltas = useDeltas
+        self.bipartite = bipartite
 
     def loadData(self, tasks):
         columns = set([self.sourceColumn, self.targetColumn, self.timestampColumn])
@@ -94,23 +96,32 @@ class DataLoader:
             (pd.read_csv(file, usecols=columns) for file in files),
             ignore_index=True,
             copy=False,
+        ).rename(
+            columns={
+                self.sourceColumn: "source",
+                self.targetColumn: "target",
+                self.timestampColumn: "timestamp",
+            }
         )
+        if self.bipartite:
+            data["source"] = data["source"].apply(lambda x: f"s-{x}")
+            data["target"] = data["target"].apply(lambda x: f"t-{x}")
 
         with TimedStep("Sorting"):
             data.sort_values(
-                self.timestampColumn, kind="quicksort", inplace=True, ignore_index=True
+                "timestamp", kind="quicksort", inplace=True, ignore_index=True
             )
 
         with TimedStep("Generating node IDs"):
             id2ip = pd.unique(
-                data[[self.sourceColumn, self.targetColumn]].values.ravel("K")
+                data[["source", "target"]].values.ravel("K")
             )
             ip2id = {ip: id for id, ip in enumerate(id2ip)}
-            data.loc[:, (self.sourceColumn, self.targetColumn)] = data[
-                [self.sourceColumn, self.targetColumn]
+            data.loc[:, ("source", "target")] = data[
+                ["source", "target"]
             ].map(ip2id.get)
             E = pandas2torch(
-                data[[self.sourceColumn, self.targetColumn]], dtype=np.int64
+                data[["source", "target"]], dtype=np.int64
             )
             ip2id = {str(ip): id for ip, id in ip2id.items()}
 
@@ -144,9 +155,9 @@ class DataLoader:
             if self.useDeltas:
                 deltas = computeDeltas(
                     data,
-                    self.sourceColumn,
-                    self.targetColumn,
-                    self.timestampColumn,
+                    "source",
+                    "target",
+                    "timestamp",
                 )
 
             match (self.useDeltas, Xnum.empty, Xcat.empty):
