@@ -1,6 +1,13 @@
 import cells
 from sequence_loader import DataLoader
-from metrics import accuracy, auc
+from metrics import (
+    accuracy,
+    auc,
+    precision,
+    recall,
+    drawPrecisionRecallCurve,
+    dynamicWeightedBCE,
+)
 import memory_model as m
 import outputs as o
 import torch
@@ -21,13 +28,24 @@ conf = {
     "trainBatchSize": 192,
     "validBatchSize": 4096,
     "model": m.MemoryNetwork(m.SimpleMemoryUpdater(64, torch.nn.GRUCell)),
-    "optimizer": torch.optim.Adam,
+    "optimizer": lambda x: torch.optim.Adam(x, lr=0.1),
     "mixedPrecision": False,
     "outputs": [
         (
             m.EdgeDecoder,
             [
-                o.EdgeBinaryClassification("state_label", 1, metrics=[accuracy, auc]),
+                o.EdgeBinaryClassification(
+                    "state_label",
+                    1,
+                    metrics=[
+                        precision,
+                        recall,
+                        accuracy,
+                        auc,
+                        drawPrecisionRecallCurve,
+                    ],
+                    loss=dynamicWeightedBCE(),
+                ),
             ],
         ),
     ],

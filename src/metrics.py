@@ -2,6 +2,7 @@ import ignite
 import ignite.contrib.metrics
 import ignite.metrics
 import torch
+from focal_loss.focal_loss import FocalLoss
 from sklearn import metrics as m
 import matplotlib.pyplot as plt
 
@@ -103,3 +104,48 @@ def fbeta(beta):
 
 
 f1 = fbeta(1)
+
+
+# --- Losses ---
+
+
+def loggedLoss(lossFn, threshold=0.5):
+    def loss(output, target):
+        shape = list(output.shape)
+        size = shape[0] * shape[1]
+        nb_classes = target.unique(return_counts=True)[1].tolist()
+        nb_pred = int((output > threshold).sum())
+        print(f"\nBatch size: {size}({'x'.join([str(x) for x in shape])})")
+        print(
+            f"YTrue: {",".join([f"{nb}({round(100*nb/size, 4)}%)" for nb in nb_classes])}"
+        )
+        print(
+            f"Predicted (ypred > {threshold}): {nb_pred}({round(100*nb_pred/size, 4)}%)"
+        )
+        loss_value = lossFn(output, target)
+        print(f"Computed Loss: {loss_value}")
+        return loss_value
+
+    return loss
+
+
+def dynamicWeightedBCE():
+    def loss(output, target):
+        nb_classes = target.unique(return_counts=True)[1]
+        weight = nb_classes[0] / nb_classes[1]
+        loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=weight)
+        return loss_fn(output, target)
+
+    return loss
+
+
+def sigmoidFocalLoss(gamma=0.7):
+    # m = torch.nn.Softmax(dim=-1)
+    m = torch.nn.Sigmoid()
+    focalLoss = FocalLoss(gamma)
+
+    def loss(output, target):
+        pred = m(output)
+        return focalLoss(pred.flatten(), target.long())
+
+    return loss
