@@ -1,6 +1,7 @@
 import torch
 import pandas as pd
 from util import pandas2torch
+import numpy as np
 
 ########## UTILITY FUNCTIONS ##########
 
@@ -60,6 +61,7 @@ class Task:
         Ypred, Ytrue = self.extract(state_output)
         Ypred = torch.squeeze(Ypred)
         Ytrue = torch.squeeze(Ytrue)
+        print(Ypred.shape, Ytrue.shape)
         return self.taskWeight * self.loss(Ypred, Ytrue)
 
     def prepare_predictions(self, state_output):
@@ -90,6 +92,15 @@ class MultiClassification(Task):
         loss=torch.nn.CrossEntropyLoss(),
         activation=torch.nn.Softmax(),
         **kwargs,
+    ):
+        super().__init__(key, loss, activation, **kwargs)
+        self.pred_size = 1
+        self.true_size = 1
+
+
+class Regression(Task):
+    def __init__(
+        self, key, loss=torch.nn.MSELoss(), activation=torch.nn.Identity(), **kwargs
     ):
         super().__init__(key, loss, activation, **kwargs)
         self.pred_size = 1
@@ -143,7 +154,7 @@ class EdgeIsMalicious(BinaryClassification):
 
 class EdgeBinaryClassification(BinaryClassification):
     def __init__(
-        self, label: str, positiveTag, taskName="edge_label_classification", **kwargs
+        self, label: str, positiveTag, taskName="edge-label-classification", **kwargs
     ):
         self.label = label
         self.positiveTag = positiveTag
@@ -158,7 +169,7 @@ class EdgeBinaryClassification(BinaryClassification):
 
 
 class EdgeMulticlassification(MultiClassification):
-    def __init__(self, labels, taskName="edge_label_classification", **kwargs):
+    def __init__(self, labels, taskName="edge-label-classification", **kwargs):
         self.labels = labels
         super().__init__(taskName, **kwargs)
 
@@ -168,3 +179,34 @@ class EdgeMulticlassification(MultiClassification):
 
     def compute_labels(self, data):
         return pandas2torch(data[list(self.labels)])
+
+
+class NodeProbToPositive(Regression):
+    def __init__(
+        self,
+        edge_label,
+        positive_tag=1,
+        taskName="incomming-positive-estimation",
+        **kwargs,
+    ):
+        self.edge_label = edge_label
+        self.positive_tag = positive_tag
+        super().__init__(taskName, activation=lambda x: torch.clamp(x, 0, 1), **kwargs)
+
+    @property
+    def required_features(self):
+        return {self.edge_label}
+
+    def compute_labels(self, data, predictive_rate=0.001):
+        df = data[["source", "timestamp", self.edge_label]]
+        posDf = df.query(f"{self.edge_label} == {self.positive_tag}")
+        posDf = posDf.rename(columns={"timestamp": "time_positive"})
+        df = df.merge(posDf[["source", "time_positive"]], on="source", how="outer")
+        df["will_positive"] = np.exp(
+            predictive_rate * (df["timestamp"] - df["time_positive"])
+        )
+        df = df.fillna(0)
+        print(df.shape)
+        Ysrc = pandas2torch(df["will_positive"])
+        Ydst = torch.zeros_like(Ysrc)
+        return torch.stack((Ysrc, Ydst), dim=1)
