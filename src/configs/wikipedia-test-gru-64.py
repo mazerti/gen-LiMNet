@@ -22,6 +22,7 @@ conf = {
         nodeFeatures={},
         sequenceLength=5_000,
         sequenceStride=1_000,
+        bipartite=True,
     ),
     "trainRatio": 0.8,
     "epochs": 5,
@@ -32,9 +33,24 @@ conf = {
     "mixedPrecision": False,
     "outputs": [
         (
-            m.EdgeDecoder,
+            # m.EdgeDecoder,
+            # [
+            #     o.EdgeBinaryClassification(
+            #         "state_label",
+            #         1,
+            #         metrics=[
+            #             precision,
+            #             recall,
+            #             accuracy,
+            #             auc,
+            #             drawPrecisionRecallCurve,
+            #         ],
+            #         loss=dynamicWeightedBCE(),
+            #     ),
+            # ],
+            m.UserDecoder,
             [
-                o.EdgeBinaryClassification(
+                o.UserClassification(
                     "state_label",
                     1,
                     metrics=[
@@ -45,7 +61,7 @@ conf = {
                         drawPrecisionRecallCurve,
                     ],
                     loss=dynamicWeightedBCE(),
-                ),
+                )
             ],
         ),
     ],

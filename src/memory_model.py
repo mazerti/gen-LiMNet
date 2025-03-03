@@ -138,6 +138,18 @@ class NodeDecoder(torch.nn.Module):
         return self.linear(emb)
 
 
+class UserDecoder(NodeDecoder):
+    def forward(
+        self,
+        inputs: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        embeddings: Tuple[torch.Tensor, torch.Tensor],
+    ):
+        E, _, Xv = inputs
+        Hsrc, Hdst = embeddings
+        B = torch.arange(Hsrc.shape[0])
+        return self.linear(Hsrc)
+
+
 class MemoryNetwork(torch.nn.Module):
     def __init__(self, memory_updater):
         super().__init__()

@@ -181,6 +181,25 @@ class EdgeMulticlassification(MultiClassification):
         return pandas2torch(data[list(self.labels)])
 
 
+class UserClassification(EdgeBinaryClassification):
+    """User classification after observing an interaction perform by that user."""
+
+    def __init__(self, label, positiveTag, taskName="user-classification", **kwargs):
+        super().__init__(label, positiveTag, taskName, **kwargs)
+
+    def compute_labels(self, data):
+        node_label = (
+            pd.concat(
+                (data["source"], data[self.label] == self.positiveTag),
+                axis="columns",
+            )
+            .groupby(by="source", as_index=False)
+            .any()
+        )
+        labels = node_label.loc[data["source"]]
+        return pandas2torch(labels[self.label])
+
+
 class NodeProbToPositive(Regression):
     def __init__(
         self,
