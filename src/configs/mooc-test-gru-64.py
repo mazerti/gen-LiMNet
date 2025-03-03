@@ -23,6 +23,7 @@ conf = {
         nodeFeatures={},
         sequenceLength=5_000,
         sequenceStride=1_000,
+        bipartite=True,
     ),
     "trainRatio": 0.8,
     "epochs": 10,
@@ -32,12 +33,28 @@ conf = {
     "optimizer": lambda x: torch.optim.Adam(x, lr=0.1),
     "mixedPrecision": False,
     "outputs": [
+        # (
+        #     m.EdgeDecoder,
+        #     [
+        #         o.EdgeBinaryClassification(
+        #             "LABEL",
+        #             1,
+        #             metrics=[
+        #                 precision,
+        #                 recall,
+        #                 accuracy,
+        #                 auc,
+        #                 drawPrecisionRecallCurve,
+        #             ],
+        #             loss=dynamicWeightedBCE(),
+        #         ),
+        #     ],
+        # ),
         (
-            m.EdgeDecoder,
+            m.NodeDecoder,
             [
-                o.EdgeBinaryClassification(
+                o.NodeProbToPositive(
                     "LABEL",
-                    1,
                     metrics=[
                         precision,
                         recall,
@@ -45,7 +62,6 @@ conf = {
                         auc,
                         drawPrecisionRecallCurve,
                     ],
-                    loss=dynamicWeightedBCE(),
                 ),
             ],
         ),
