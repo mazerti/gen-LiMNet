@@ -2,12 +2,14 @@ import argparse
 import ignite
 import json
 import os
+import ignite.engine
 from ignite.utils import convert_tensor
 import torch.utils.data.dataloader
 import outputs as o
 import pickle
 import torch
 import util
+from custom_engine import create_trainer, create_evaluator
 
 
 def lossFunction(tasks):
@@ -65,16 +67,20 @@ def run_training(conf, baseFolder, device, resume):
         )
 
     trainerArgs = {"amp_mode": "amp", "scaler": scaler} if mixedPrecision else {}
-    trainer = ignite.engine.create_supervised_trainer(
+    trainer = create_trainer(
         model,
         optimizer,
-        lambda Ypred, Ytrue: loss((Ypred, Ytrue)),
+        lambda Ypred, Ytrue, masks: loss((Ypred, Ytrue)),
         device=device,
         prepare_batch=prepare_batch,
         **trainerArgs,
     )
-    evaluator = ignite.engine.create_supervised_evaluator(
-        model, metrics, device=device, amp_mode="amp" if mixedPrecision else None
+    evaluator = create_evaluator(
+        model,
+        metrics,
+        device=device,
+        amp_mode="amp" if mixedPrecision else None,
+        prepare_batch=prepare_batch,
     )
 
     # Define tracking events/statistics (checkpoints, losses, etc.)
