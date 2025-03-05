@@ -26,6 +26,7 @@ conf = {
     ),
     "trainRatio": 0.8,
     "epochs": 100,
+    "batchSize": 192,
     "trainBatchSize": 192,
     "validBatchSize": 4096,
     "model": m.MemoryNetwork(m.SimpleMemoryUpdater(64, torch.nn.GRUCell)),

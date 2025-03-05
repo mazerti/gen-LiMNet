@@ -32,6 +32,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.edgeData = edgeData
         self.size = size
         self.Xv = Xv
+        self.masks = None
 
     def __getitem__(self, id):
         start = self.starts[id]
@@ -42,6 +43,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         Xe = Xe[start:stop]
         Xv = self.Xv[E]
         labels = tuple(lbls[start:stop] for lbls in labels)
+        trainMask, valMask = self.masks
+        trainMask = trainMask[start:stop]
+        valMask = valMask[start:stop]
 
         V = torch.unique(E)
         I = torch.arange(V.shape[0])
@@ -50,10 +54,13 @@ class SequenceDataset(torch.utils.data.Dataset):
         )
         IM[V] = I
 
-        return (IM[E], Xe, Xv, labels)
+        return (IM[E], Xe, Xv, labels, (trainMask, valMask))
 
     def __len__(self):
         return len(self.starts)
+
+    def set_masks(self, trainMask, valMask):
+        self.masks = (trainMask, valMask)
 
 
 class DataLoader:

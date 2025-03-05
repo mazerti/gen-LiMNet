@@ -8,6 +8,7 @@ import time
 import torch
 from ignite.engine import Events
 from tqdm.auto import tqdm
+from sklearn.model_selection import train_test_split
 
 
 class TimedStep:
@@ -70,7 +71,35 @@ def tqdmHandler(engine, epochs=False, **kwargs):
         pbar = None
 
 
-def split_dataset(dataset, baseFolder, resume, trainRatio):
+def node_labels(interactions):
+    uniqueNodes = interactions[:, 0].unique()
+    nodeLabels = torch.zeros_like(uniqueNodes, dtype=torch.float)
+    for index, node in enumerate(uniqueNodes):
+        nodeInteractions = interactions[interactions[:, 0] == node]
+        if (nodeInteractions[:, 1] == 1).any():
+            nodeLabels[index] = 1
+    return nodeLabels
+
+
+def recursive_shape(things):
+    def __recursive_shape(things):
+        if hasattr(things, "shape"):
+            return [f"{type(things)}:{things.shape}"]
+        if type(things) is str:
+            return []
+        try:
+            iter(things)
+            res = [f"{type(things)}:{len(things)}"]
+            for thing in things:
+                for row in __recursive_shape(thing):
+                    res.append(f"|- {row}")
+            return res
+        except TypeError:
+            return [f"{type(things)}"]
+    return "\n".join(__recursive_shape(things))
+
+
+def split_dataset(dataset, baseFolder, resume, trainRatio, device):
     if resume:
         with open(f"{baseFolder}/seed.txt", "r") as f:
             seed = int(f.read())
@@ -80,6 +109,27 @@ def split_dataset(dataset, baseFolder, resume, trainRatio):
             f.write(str(seed))
     torch.manual_seed(seed)
 
-    trainCount = int(len(dataset) * trainRatio)
-    validCount = len(dataset) - trainCount
-    return torch.utils.data.random_split(dataset, [trainCount, validCount])
+    allNodes = dataset.edgeData[0][:, 0]
+    interactionLabels = dataset.edgeData[2][0][
+        :, 0
+    ]  # Assuming only one label TODO: extend to more
+    interactions = torch.stack((allNodes, interactionLabels)).transpose(0, 1)
+
+    uniqueNodes = allNodes.unique()
+    nodeLabels = torch.zeros_like(uniqueNodes, dtype=torch.float)
+    for index, node in enumerate(uniqueNodes):
+        nodeInteractions = interactions[allNodes == node]
+        if (nodeInteractions[:, 1] == 1).any():
+            nodeLabels[index] = 1
+    nodeLabels = node_labels(interactions)
+
+    trainNodes, valNodes = train_test_split(
+        uniqueNodes.numpy(),
+        stratify=nodeLabels.numpy(),
+        test_size=trainRatio,
+        random_state=42,
+    )
+
+    trainMask = torch.isin(allNodes, torch.tensor(trainNodes))
+    valMask = torch.isin(allNodes, torch.tensor(valNodes))
+    dataset.set_masks(trainMask, valMask)

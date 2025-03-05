@@ -192,11 +192,15 @@ class MemoryNetwork(torch.nn.Module):
 
     @staticmethod
     def makeBatch(seqs):
-        E = torch.stack([E for E, Xe, Xv, labels in seqs], dim=1)
-        Xe = torch.stack([Xe for E, Xe, Xv, labels in seqs], dim=1)
-        Xv = torch.stack([Xv for E, Xe, Xv, labels in seqs], dim=1)
+        E = torch.stack([E for E, Xe, Xv, labels, masks in seqs], dim=1)
+        Xe = torch.stack([Xe for E, Xe, Xv, labels, masks in seqs], dim=1)
+        Xv = torch.stack([Xv for E, Xe, Xv, labels, masks in seqs], dim=1)
         labels = tuple(
-            torch.stack([labels[i] for E, Xe, Xv, labels in seqs], dim=1)
+            torch.stack([labels[i] for E, Xe, Xv, labels, masks in seqs], dim=1)
             for i in range(len(seqs[0][3]))
         )
-        return (E, Xe, Xv), labels
+        masks = tuple(
+            torch.stack([masks[i] for E, Xe, Xv, labels, masks in seqs], dim=1)
+            for i in range(len(seqs[0][4]))
+        )
+        return (E, Xe, Xv), labels, masks

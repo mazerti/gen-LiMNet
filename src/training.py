@@ -2,6 +2,8 @@ import argparse
 import ignite
 import json
 import os
+from ignite.utils import convert_tensor
+import torch.utils.data.dataloader
 import outputs as o
 import pickle
 import torch
@@ -28,15 +30,11 @@ def run_training(conf, baseFolder, device, resume):
     with open(f"{baseFolder}/info.json", "w") as f:
         json.dump(info, f, indent=4)
 
-    trainDataset, validDataset = util.split_dataset(
-        dataset, baseFolder, resume, conf["trainRatio"]
-    )
+    util.split_dataset(dataset, baseFolder, resume, conf["trainRatio"], device)
+    # o.set_masks(outputs, trainMask, validMask)
     data_loader_args = dict(collate_fn=model.makeBatch, num_workers=12, pin_memory=True)
-    trainData = torch.utils.data.DataLoader(
-        trainDataset, batch_size=conf["trainBatchSize"], **data_loader_args
-    )
-    validData = torch.utils.data.DataLoader(
-        validDataset, batch_size=conf["validBatchSize"], **data_loader_args
+    data = torch.utils.data.DataLoader(
+        dataset, batch_size=conf["batchSize"], **data_loader_args
     )
 
     # Setup the model, loss function and optimizers
@@ -59,12 +57,20 @@ def run_training(conf, baseFolder, device, resume):
     }
     metrics["validation-loss"] = ignite.metrics.Average(loss)
 
+    def prepare_batch(batch, device, non_blocking):
+        features, labels, masks = batch
+        return (
+            convert_tensor(features, device=device, non_blocking=non_blocking),
+            convert_tensor(labels, device=device, non_blocking=non_blocking),
+        )
+
     trainerArgs = {"amp_mode": "amp", "scaler": scaler} if mixedPrecision else {}
     trainer = ignite.engine.create_supervised_trainer(
         model,
         optimizer,
         lambda Ypred, Ytrue: loss((Ypred, Ytrue)),
         device=device,
+        prepare_batch=prepare_batch,
         **trainerArgs,
     )
     evaluator = ignite.engine.create_supervised_evaluator(
@@ -83,7 +89,7 @@ def run_training(conf, baseFolder, device, resume):
     @trainer.on(ignite.engine.Events.EPOCH_COMPLETED)
     def do_validation(trainer):
         nonlocal batchLosses
-        evaluator.run(validData)
+        evaluator.run(data)
         metrics = dict(evaluator.state.metrics)
         metrics["epoch_time"] = trainer.state.times["EPOCH_COMPLETED"]
         if len(batchLosses) > 0:
@@ -131,7 +137,7 @@ def run_training(conf, baseFolder, device, resume):
         do_validation(trainer)
 
     # Run training
-    trainer.run(trainData, max_epochs=conf["epochs"])
+    trainer.run(data, max_epochs=conf["epochs"])
 
     # Store results
     with open(f"{baseFolder}/metrics.json", "w") as f:
