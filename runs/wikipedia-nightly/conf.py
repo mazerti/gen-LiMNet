@@ -25,11 +25,11 @@ conf = {
         bipartite=True,
     ),
     "trainRatio": 0.8,
-    "epochs": 100,
+    "epochs": 200,
     "trainBatchSize": 192,
     "validBatchSize": 4096,
     "model": m.MemoryNetwork(m.SimpleMemoryUpdater(64, torch.nn.GRUCell)),
-    "optimizer": lambda x: torch.optim.Adam(x, lr=0.2),
+    "optimizer": lambda x: torch.optim.Adam(x, lr=0.1),
     "mixedPrecision": False,
     "outputs": [
         (
