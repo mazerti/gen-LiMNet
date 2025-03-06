@@ -2,6 +2,8 @@ import torch
 import pandas as pd
 from util import pandas2torch
 import numpy as np
+import sys
+import util
 
 ########## UTILITY FUNCTIONS ##########
 
@@ -52,7 +54,7 @@ class Task:
 
     def extract(self, state_output):
         Ypred, Ytrue = state_output
-        return(Ypred[self.output], Ytrue[self.output])
+        return (Ypred[self.output], Ytrue[self.output])
         # return (
         #     Ypred[self.output][..., self.pred_pos : self.pred_end],
         #     Ytrue[self.output][..., self.pred_pos : self.pred_end],

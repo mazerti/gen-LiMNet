@@ -96,6 +96,7 @@ def recursive_shape(things):
             return res
         except TypeError:
             return [f"{type(things)}"]
+
     return "\n".join(__recursive_shape(things))
 
 
