@@ -113,7 +113,7 @@ f1 = fbeta(1)
 def loggedLoss(lossFn, threshold=0.5):
     def loss(output, target):
         shape = list(output.shape)
-        size = shape[0] * shape[1]
+        size = reduce(mul, shape, 1)
         nb_classes = target.unique(return_counts=True)[1].tolist()
         nb_pred = int((output > threshold).sum())
         print(f"\nBatch size: {size}({'x'.join([str(x) for x in shape])})")
@@ -133,7 +133,10 @@ def loggedLoss(lossFn, threshold=0.5):
 def dynamicWeightedBCE():
     def loss(output, target):
         nb_classes = target.unique(return_counts=True)[1]
-        weight = nb_classes[0] / nb_classes[1]
+        if len(nb_classes) == 2:
+            weight = nb_classes[0] / nb_classes[1]
+        else:
+            weight = None
         loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=weight)
         return loss_fn(output, target)
 
