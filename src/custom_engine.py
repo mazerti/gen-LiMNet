@@ -36,10 +36,12 @@ def supervised_training_step(
             optimizer.zero_grad()
         model.train()
         x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
-        masks = convert_tensor(batch[2], device=device, non_blocking=non_blocking)
+        mask, _ = convert_tensor(batch[2], device=device, non_blocking=non_blocking)
         output = model_fn(model, x)
         y_pred = model_transform(output)
-        loss = loss_fn(y_pred, y, masks)
+        y_pred = tuple((torch.masked_select(torch.squeeze(pred), mask) for pred in y_pred))
+        y = tuple((torch.masked_select(torch.squeeze(lab), mask) for lab in y))
+        loss = loss_fn(y_pred, y)
         if gradient_accumulation_steps > 1:
             loss = loss / gradient_accumulation_steps
         loss.backward()
@@ -94,17 +96,20 @@ def supervised_evaluation_step(
     non_blocking: bool = False,
     prepare_batch=_prepare_batch,
     model_transform=lambda output: output,
-    output_transform=lambda x, y, y_pred, masks: (y_pred, y),
+    output_transform=lambda x, y, y_pred: (y_pred, y),
     model_fn=lambda model, x: model(x),
 ):
     def evaluate_step(engine, batch):
         model.eval()
         with torch.no_grad():
             x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
-            masks = convert_tensor(batch[2])
+            _, mask = convert_tensor(batch[2], device=device, non_blocking=non_blocking)
             output = model_fn(model, x)
             y_pred = model_transform(output)
-            return output_transform(x, y, y_pred, masks)
+            y_pred = tuple((torch.masked_select(torch.squeeze(pred), mask) for pred in y_pred))
+            y = tuple((torch.masked_select(torch.squeeze(lab), mask) for lab in y))
+            # It can happen that y is empty here. That is an issue.
+            return output_transform(x, y, y_pred)
 
     return evaluate_step
 
@@ -116,7 +121,7 @@ def create_evaluator(
     non_blocking: bool = False,
     prepare_batch=_prepare_batch,
     model_transform=lambda output: output,
-    output_transform=lambda x, y, y_pred, masks: (y_pred, y),
+    output_transform=lambda x, y, y_pred: (y_pred, y),
     amp_mode=None,
     model_fn=lambda model, x: model(x),
 ):

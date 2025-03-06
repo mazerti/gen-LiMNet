@@ -33,7 +33,6 @@ def run_training(conf, baseFolder, device, resume):
         json.dump(info, f, indent=4)
 
     util.split_dataset(dataset, baseFolder, resume, conf["trainRatio"], device)
-    # o.set_masks(outputs, trainMask, validMask)
     data_loader_args = dict(collate_fn=model.makeBatch, num_workers=12, pin_memory=True)
     data = torch.utils.data.DataLoader(
         dataset, batch_size=conf["batchSize"], **data_loader_args
@@ -70,7 +69,7 @@ def run_training(conf, baseFolder, device, resume):
     trainer = create_trainer(
         model,
         optimizer,
-        lambda Ypred, Ytrue, masks: loss((Ypred, Ytrue)),
+        lambda Ypred, Ytrue: loss((Ypred, Ytrue)),
         device=device,
         prepare_batch=prepare_batch,
         **trainerArgs,

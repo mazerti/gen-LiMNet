@@ -79,6 +79,7 @@ class DrawPrecisionRecallCurve(ignite.metrics.Metric):
         ax.set_ylabel("Precision")
         ax.set_xlabel("Recall")
         fig.savefig("test-prec-recall-curve.png")
+        plt.close(fig)
         return m.auc(self.recall, self.precisions)
 
 

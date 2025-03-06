@@ -52,16 +52,14 @@ class Task:
 
     def extract(self, state_output):
         Ypred, Ytrue = state_output
-        return (
-            Ypred[self.output][..., self.pred_pos : self.pred_end],
-            Ytrue[self.output][..., self.pred_pos : self.pred_end],
-        )
+        return(Ypred[self.output], Ytrue[self.output])
+        # return (
+        #     Ypred[self.output][..., self.pred_pos : self.pred_end],
+        #     Ytrue[self.output][..., self.pred_pos : self.pred_end],
+        # )
 
     def compute_loss(self, state_output):
         Ypred, Ytrue = self.extract(state_output)
-        Ypred = torch.squeeze(Ypred)
-        Ytrue = torch.squeeze(Ytrue)
-        print(Ypred.shape, Ytrue.shape)
         return self.taskWeight * self.loss(Ypred, Ytrue)
 
     def prepare_predictions(self, state_output):
@@ -225,7 +223,6 @@ class NodeProbToPositive(Regression):
             predictive_rate * (df["timestamp"] - df["time_positive"])
         )
         df = df.fillna(0)
-        print(df.shape)
         Ysrc = pandas2torch(df["will_positive"])
         Ydst = torch.zeros_like(Ysrc)
         return torch.stack((Ysrc, Ydst), dim=1)

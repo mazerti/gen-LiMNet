@@ -183,7 +183,7 @@ class DataLoader:
                 case (False, True, False):
                     Xe = Xcat
                 case (False, True, True):
-                    Xe = np.zeros(data.shape[0], 1)
+                    Xe = pd.DataFrame(np.zeros((data.shape[0], 1)))
 
             totalFeatures = 2 * Xv.shape[1] + Xe.shape[1]
             if totalFeatures % self.align != 0:
