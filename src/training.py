@@ -154,7 +154,7 @@ def run_training(conf, baseFolder, device, resume):
     )
 
 
-if __name__ == "__main__":
+def _parseArgs():
     parser = argparse.ArgumentParser(description="Train a model.")
     parser.add_argument(
         "run_name",
@@ -182,7 +182,7 @@ if __name__ == "__main__":
         action="store_true",
         help="resume training from the latest checkpoint",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
     baseFolder = f"runs/{args.run_name}"
     targetConfFile = f"{baseFolder}/conf.py"
@@ -198,7 +198,7 @@ if __name__ == "__main__":
         os.makedirs(baseFolder)
     else:
         for filename in os.listdir(baseFolder):
-            if filename == "conf.py" and inputConfFile == targetConfFile:
+            if filename == "conf.py" and isConfigFileGiven:
                 continue
             if filename.startswith("checkpoint") and args.resume:
                 continue
@@ -208,8 +208,33 @@ if __name__ == "__main__":
                 continue
             os.remove(f"{baseFolder}/{filename}")
 
-    if targetConfFile != inputConfFile:
+
+def copy_config_file(targetConfFile, inputConfFile, isConfigFileGiven):
+    if not isConfigFileGiven:
         with open(targetConfFile, "w") as target, open(inputConfFile, "r") as input:
             target.write(input.read())
 
-    run_training(conf, baseFolder, device, args.resume)
+
+def main():
+    args = _parseArgs()
+
+    baseFolder = f"runs/{args.run_name}"
+    targetConfFile = f"{baseFolder}/conf.py"
+    inputConfFile = args.config or targetConfFile
+
+    if args.cpus is not None:
+        torch.set_num_threads(args.cpus)
+
+    create_clean_base_folder(args, baseFolder, isConfigFileGiven=args.config)
+    copy_config_file(targetConfFile, inputConfFile, isConfigFileGiven=args.config)
+
+    run_training(
+        conf=util.loadConfigurationFile(inputConfFile).conf,
+        baseFolder=baseFolder,
+        device=torch.device(f"cuda:{args.gpu}" if args.gpu is not None else "cpu"),
+        resume=args.resume,
+    )
+
+
+if __name__ == "__main__":
+    main()
