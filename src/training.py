@@ -19,58 +19,38 @@ def lossFunction(tasks):
     return compute_loss
 
 
+def prepare_batch(batch, device, non_blocking):
+    features, labels, masks = batch
+    return (
+        convert_tensor(features, device=device, non_blocking=non_blocking),
+        convert_tensor(labels, device=device, non_blocking=non_blocking),
+    )
+
+
 def run_training(conf, baseFolder, device, resume):
-    # Get config
     model = conf["model"]
     outputs = conf["outputs"]
-    dataLoader = conf["dataLoader"]
     mixedPrecision = conf.get("mixedPrecision", False)
     tasks = o.get_tasks(outputs, device)
 
-    dataset, info = dataLoader.loadData(tasks, baseFolder, resume, conf["trainRatio"])
+    info, data = load_data(conf, baseFolder, resume, model, tasks)
 
-    store_data_info(baseFolder, info)
-
-    data_loader_args = dict(collate_fn=model.makeBatch, num_workers=12, pin_memory=True)
-    data = torch.utils.data.DataLoader(
-        dataset, batch_size=conf["batchSize"], **data_loader_args
-    )
-
-    # Setup the model, loss function and optimizers
-    model.build(
-        info,
-        o.get_decoders(outputs),
-        torch.float16 if mixedPrecision else torch.float32,
-    )
-    model.to(device)
-    model.optimize()
+    build_model(device, model, outputs, mixedPrecision, info)
 
     loss = lossFunction(tasks)
     scaler = torch.amp.GradScaler("cuda")
     optimizer = conf["optimizer"](model.parameters())
 
-    metrics = {
-        metricKey: metricFunc
-        for task in tasks
-        for metricKey, metricFunc in task.metrics.items()
-    }
-    metrics["validation-loss"] = ignite.metrics.Average(loss)
+    metrics = gather_metrics(tasks, loss)
 
-    def prepare_batch(batch, device, non_blocking):
-        features, labels, masks = batch
-        return (
-            convert_tensor(features, device=device, non_blocking=non_blocking),
-            convert_tensor(labels, device=device, non_blocking=non_blocking),
-        )
-
-    trainerArgs = {"amp_mode": "amp", "scaler": scaler} if mixedPrecision else {}
     trainer = create_trainer(
         model,
         optimizer,
         lambda Ypred, Ytrue: loss((Ypred, Ytrue)),
         device=device,
         prepare_batch=prepare_batch,
-        **trainerArgs,
+        amp_mode="amp" if mixedPrecision else None,
+        scaler=scaler if mixedPrecision else False,
     )
     evaluator = create_evaluator(
         model,
@@ -150,6 +130,43 @@ def run_training(conf, baseFolder, device, resume):
         f"{baseFolder}/model.pt",
         pickle_protocol=pickle.HIGHEST_PROTOCOL,
     )
+
+
+def gather_metrics(tasks, loss):
+    metrics = {
+        metricKey: metricFunc
+        for task in tasks
+        for metricKey, metricFunc in task.metrics.items()
+    }
+    metrics["validation-loss"] = ignite.metrics.Average(loss)
+    return metrics
+
+
+def build_model(device, model, outputs, mixedPrecision, info):
+    model.build(
+        info,
+        o.get_decoders(outputs),
+        torch.float16 if mixedPrecision else torch.float32,
+    )
+    model.to(device)
+    model.optimize()
+
+
+def load_data(conf, baseFolder, resume, model, tasks):
+    dataset, info = conf["dataLoader"].loadData(
+        tasks, baseFolder, resume, conf["trainRatio"]
+    )
+    store_data_info(baseFolder, info)
+    data = to_dataloader(dataset, batchSize=conf["batchSize"], model=model)
+    return info, data
+
+
+def to_dataloader(dataset, batchSize, model):
+    data_loader_args = dict(collate_fn=model.makeBatch, num_workers=12, pin_memory=True)
+    data = torch.utils.data.DataLoader(
+        dataset, batch_size=batchSize, **data_loader_args
+    )
+    return data
 
 
 def store_data_info(baseFolder, info):
