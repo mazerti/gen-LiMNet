@@ -5,6 +5,8 @@ import torch
 from focal_loss.focal_loss import FocalLoss
 from sklearn import metrics as m
 import matplotlib.pyplot as plt
+from functools import reduce
+from operator import mul
 
 from ignite.metrics.metric import sync_all_reduce, reinit__is_reduced
 

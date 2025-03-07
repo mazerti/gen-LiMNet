@@ -18,6 +18,7 @@ conf = {
         sourceColumn="user_id",
         targetColumn="item_id",
         timestampColumn="timestamp",
+        balanceOn="state_label",
         edgeFeatures={f"f{i}" for i in range(172)},
         nodeFeatures={},
         sequenceLength=5_000,

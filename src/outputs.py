@@ -1,6 +1,5 @@
 import torch
 import pandas as pd
-from util import pandas2torch
 import numpy as np
 import sys
 import util
@@ -110,48 +109,6 @@ class Regression(Task):
 ########## ACTUAL OUTPUTS ##########
 
 
-class NodeIsMalicious(BinaryClassification):
-    def __init__(self, **kwargs):
-        super().__init__("node-is-malicious", **kwargs)
-
-    @property
-    def required_features(self):
-        return {"traffic_type", "port_src", "port_dst"}
-
-    def compute_labels(self, data):
-        Ye = data["traffic_type"] == "mal"
-        Ysrc = pandas2torch(Ye & (data["port_src"] > 10000))
-        Ydst = pandas2torch(Ye & (data["port_dst"] > 10000))
-        return torch.stack((Ysrc, Ydst), dim=1)
-
-
-class NodeIsAttacked(BinaryClassification):
-    def __init__(self, **kwargs):
-        super().__init__("node-is-attacked", **kwargs)
-
-    @property
-    def required_features(self):
-        return {"traffic_type", "port_src", "port_dst"}
-
-    def compute_labels(self, data):
-        Ye = data["traffic_type"] == "mal"
-        Ysrc = pandas2torch(Ye & (data["port_src"] < 10000))
-        Ydst = pandas2torch(Ye & (data["port_dst"] < 10000))
-        return torch.stack((Ysrc, Ydst), dim=1)
-
-
-class EdgeIsMalicious(BinaryClassification):
-    def __init__(self, **kwargs):
-        super().__init__("edge-is-malicious", **kwargs)
-
-    @property
-    def required_features(self):
-        return {"traffic_type"}
-
-    def compute_labels(self, data):
-        return pandas2torch(data["traffic_type"] == "mal")
-
-
 class EdgeBinaryClassification(BinaryClassification):
     def __init__(
         self, label: str, positiveTag, taskName="edge-label-classification", **kwargs
@@ -165,7 +122,7 @@ class EdgeBinaryClassification(BinaryClassification):
         return {self.label}
 
     def compute_labels(self, data):
-        return pandas2torch(data[self.label] == self.positiveTag)
+        return data[self.label] == self.positiveTag
 
 
 class EdgeMulticlassification(MultiClassification):
@@ -178,7 +135,7 @@ class EdgeMulticlassification(MultiClassification):
         return self.labels
 
     def compute_labels(self, data):
-        return pandas2torch(data[list(self.labels)])
+        return data[list(self.labels)]
 
 
 class UserClassification(EdgeBinaryClassification):
@@ -197,7 +154,7 @@ class UserClassification(EdgeBinaryClassification):
             .any()
         )
         labels = node_label.loc[data["source"]]
-        return pandas2torch(labels[self.label])
+        return labels[self.label]
 
 
 class NodeProbToPositive(Regression):
@@ -225,6 +182,6 @@ class NodeProbToPositive(Regression):
             predictive_rate * (df["timestamp"] - df["time_positive"])
         )
         df = df.fillna(0)
-        Ysrc = pandas2torch(df["will_positive"])
-        Ydst = torch.zeros_like(Ysrc)
-        return torch.stack((Ysrc, Ydst), dim=1)
+        Ysrc = df["will_positive"]
+        Ydst = pd.DataFrame(np.zeros_like(Ysrc.values))
+        return pd.concat((Ysrc, Ydst), axis=1)

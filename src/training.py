@@ -27,12 +27,10 @@ def run_training(conf, baseFolder, device, resume):
     mixedPrecision = conf.get("mixedPrecision", False)
     tasks = o.get_tasks(outputs, device)
 
-    # Load and split dataset
-    dataset, info = dataLoader.loadData(tasks)
-    with open(f"{baseFolder}/info.json", "w") as f:
-        json.dump(info, f, indent=4)
+    dataset, info = dataLoader.loadData(tasks, baseFolder, resume, conf["trainRatio"])
 
-    util.split_dataset(dataset, baseFolder, resume, conf["trainRatio"], device)
+    store_data_info(baseFolder, info)
+
     data_loader_args = dict(collate_fn=model.makeBatch, num_workers=12, pin_memory=True)
     data = torch.utils.data.DataLoader(
         dataset, batch_size=conf["batchSize"], **data_loader_args
@@ -154,6 +152,11 @@ def run_training(conf, baseFolder, device, resume):
     )
 
 
+def store_data_info(baseFolder, info):
+    with open(f"{baseFolder}/info.json", "w") as f:
+        json.dump(info, f, indent=4)
+
+
 def _parseArgs():
     parser = argparse.ArgumentParser(description="Train a model.")
     parser.add_argument(
@@ -184,16 +187,8 @@ def _parseArgs():
     )
     return parser.parse_args()
 
-    baseFolder = f"runs/{args.run_name}"
-    targetConfFile = f"{baseFolder}/conf.py"
-    inputConfFile = args.config or targetConfFile
-    conf = util.loadConfigurationFile(inputConfFile).conf
 
-    if args.cpus is not None:
-        torch.set_num_threads(args.cpus)
-
-    device = torch.device(f"cuda:{args.gpu}" if args.gpu is not None else "cpu")
-
+def create_clean_base_folder(args, baseFolder, isConfigFileGiven):
     if not os.path.exists(baseFolder):
         os.makedirs(baseFolder)
     else:
