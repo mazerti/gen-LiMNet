@@ -185,3 +185,11 @@ class NodeProbToPositive(Regression):
         Ysrc = df["will_positive"]
         Ydst = pd.DataFrame(np.zeros_like(Ysrc.values))
         return pd.concat((Ysrc, Ydst), axis=1)
+
+
+def onlyLastInteractions(data: pd.DataFrame):
+    return data.index.isin(
+        data.sort_values(by=["source", "timestamp"])
+        .groupby("source")["timestamp"]
+        .idxmax()
+    )

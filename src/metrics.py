@@ -69,9 +69,6 @@ class DrawPrecisionRecallCurve(ignite.metrics.Metric):
             y_true=ytrue.flatten().cpu().numpy(),
             y_score=ypred.flatten().cpu().numpy(),
         )
-        print(
-            f"\nprec: {self.precisions}\nrec: {self.recall}\nthres: {self.thresholds}\n"
-        )
 
     @sync_all_reduce("_num_examples", "_num_correct:SUM")
     def compute(self):

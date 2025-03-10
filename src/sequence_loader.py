@@ -7,6 +7,8 @@ from tqdm.auto import tqdm
 from util import TimedStep, pandas2torch, numpy2torch
 from sklearn.model_selection import train_test_split
 
+import sys
+
 
 def computeDeltas(data, srcCol, dstCol, timestampCol):
     df = data[[timestampCol, srcCol, dstCol]].sort_values(by=[srcCol, timestampCol])
@@ -86,6 +88,7 @@ class DataLoader:
         align=1,
         useDeltas=False,
         bipartite=False,
+        task_specific_mask=lambda data: True,
     ):
         self.paths = paths
         self.sequenceLength = sequenceLength
@@ -99,6 +102,7 @@ class DataLoader:
         self.useDeltas = useDeltas
         self.bipartite = bipartite
         self.balanceOn = balanceOn
+        self.task_specific_mask = task_specific_mask
 
     def loadData(self, tasks, baseFolder, resume, trainRatio):
         """
@@ -133,7 +137,9 @@ class DataLoader:
             ),
             self.sequenceLength,
             starts,
-            pandas2torch(Xv, ),
+            pandas2torch(
+                Xv,
+            ),
         )
         info = {
             "N": Xv.shape[0],
@@ -150,6 +156,7 @@ class DataLoader:
         self, data, label, baseFolder, resume, trainRatio, positiveTag=1
     ):
         with TimedStep("Computing training/validation masks"):
+            task_mask = self.task_specific_mask(data)
             nodes = user_labels(data, label, positiveTag)
             trainNodes, valNodes = train_test_split(
                 nodes["source"],
@@ -158,7 +165,7 @@ class DataLoader:
                 random_state=self.set_seed(baseFolder, resume),
             )
             trainMask = data["source"].isin(trainNodes)
-            valMask = data["source"].isin(valNodes)
+            valMask = data["source"].isin(valNodes) & task_mask
         return trainMask, valMask
 
     def set_seed(self, baseFolder, resume):

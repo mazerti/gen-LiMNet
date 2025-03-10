@@ -24,6 +24,7 @@ conf = {
         sequenceLength=5_000,
         sequenceStride=1_000,
         bipartite=True,
+        task_specific_mask=o.onlyLastInteractions,
     ),
     "trainRatio": 0.8,
     "epochs": 100,
